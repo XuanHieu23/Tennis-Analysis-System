@@ -1,0 +1,8 @@
+models/
+output_videos/
+runs/
+training/data/
+training/tennis-ball-detection-6
+yolo12x.pt
+yolo26n.pt
+.vscode/
