@@ -1,8 +1,10 @@
 models/
 output_videos/
-runs/
 training/data/
-training/tennis-ball-detection-6
-yolo12x.pt
+training/tennis-ball-1/
+yolo11x.pt
 yolo26n.pt
 .vscode/
+__pycache__/
+Tennis/
+Tennis/input_video.mp4
