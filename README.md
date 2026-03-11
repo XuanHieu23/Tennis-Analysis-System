@@ -19,3 +19,22 @@ A comprehensive Computer Vision project designed to analyze tennis match videos.
 * **Deep Learning:** PyTorch, Ultralytics (YOLO)
 * **Computer Vision:** OpenCV, Torchvision
 * **Data Manipulation:** Pandas, NumPy
+
+## ✅ Model and Tracking Notes
+
+* **Player detector/tracker:** Use `yolo11x.pt` with `classes=[0]`, `conf=0.15`, and `bytetrack.yaml`.
+* **Ball detector:** Use the custom fine-tuned model `models/yolo11x_best.pt`.
+* **Detection cache safety:** Cache files should be per-video (e.g., `tracker_stubs/<video_stem>_player_detections.pkl`) so detections from one match are not reused on another.
+* **Court keypoints inference:** Use the median of predictions from several frames instead of a single frame to reduce outlier keypoints.
+
+## 🏋️ Keypoint Training
+
+Use the script below (instead of the notebook-only flow) to train with validation, best-checkpoint saving, and early stopping:
+
+```bash
+python3 training/train_court_keypoints.py \
+  --images-dir training/data/images \
+  --train-json training/data/data_train.json \
+  --val-json training/data/data_val.json \
+  --output models/keypoints_model.pth
+```
