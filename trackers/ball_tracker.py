@@ -18,6 +18,7 @@ class BallTracker:
         # interpolate the missing values
         df_ball_positions = df_ball_positions.interpolate()
         df_ball_positions = df_ball_positions.bfill()
+        df_ball_positions = df_ball_positions.ffill() # Lấp giá trị rỗng
 
         ball_positions = [{1:x} for x in df_ball_positions.to_numpy().tolist()]
 
@@ -54,6 +55,13 @@ class BallTracker:
                     df_ball_positions.loc[i, 'ball_hit'] = 1
 
         frame_nums_with_ball_hits = df_ball_positions[df_ball_positions['ball_hit']==1].index.tolist()
+        # Bộ lọc chống nhiễu: Xóa bỏ các cú đánh bị trùng lặp sát nhau
+        filtered_hits = []
+        for frame in frame_nums_with_ball_hits:
+            if len(filtered_hits) == 0 or frame - filtered_hits[-1] > 20: 
+                filtered_hits.append(frame)
+                
+        return filtered_hits
 
         return frame_nums_with_ball_hits
 
@@ -83,34 +91,46 @@ class BallTracker:
         
         return ball_detections
 
-    def detect_frame(self,frame):
-        results = self.model.predict(frame, conf=0.05, verbose=False)[0]
+    def detect_frame(self, frame):
+        results = self.model.predict(frame, conf=0.15, verbose=False)[0]
 
         ball_dict = {}
         if len(results.boxes) == 0:
-            self.last_ball_center = None
             return ball_dict
 
-        candidates = []
+        best_conf = 0
+        best_bbox = None
+
+        # Lấy kích thước video để tạo vùng cấm linh hoạt
+        height, width = frame.shape[:2]
+
         for box in results.boxes:
             bbox = box.xyxy.tolist()[0]
             conf = float(box.conf.item())
+            
             center_x = (bbox[0] + bbox[2]) / 2.0
             center_y = (bbox[1] + bbox[3]) / 2.0
-            candidates.append((bbox, conf, (center_x, center_y)))
+            
+            w = bbox[2] - bbox[0]
+            h = bbox[3] - bbox[1]
 
-        if self.last_ball_center is None:
-            best_bbox, _, best_center = max(candidates, key=lambda c: c[1])
-        else:
-            # Prefer detections near the previous ball position to reduce jitter/switching.
-            best_bbox, _, best_center = max(
-                candidates,
-                key=lambda c: c[1] - (0.0025 * (((c[2][0] - self.last_ball_center[0]) ** 2 + (c[2][1] - self.last_ball_center[1]) ** 2) ** 0.5)),
-            )
+            # Bộ lọc kích thước: Bóng không bao giờ to quá 40 pixel
+            if w > 40 or h > 40:
+                continue
 
-        self.last_ball_center = best_center
-        ball_dict[1] = best_bbox
-        
+            # Bộ lọc không gian:
+            # Chặn hoàn toàn 1/3 màn hình ở góc trên bên trái
+            if center_x < (width / 3) and center_y < (height / 3):
+                continue
+                
+            # Chọn vật thể có độ tự tin cao nhất sau khi đã qua màng lọc
+            if conf > best_conf:
+                best_conf = conf
+                best_bbox = bbox
+
+        if best_bbox is not None:
+            ball_dict[1] = best_bbox
+            
         return ball_dict
 
     def draw_bboxes(self,video_frames, player_detections):
