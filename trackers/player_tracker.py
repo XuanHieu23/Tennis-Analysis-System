@@ -1,5 +1,8 @@
 import os
 import pickle
+import sys
+sys.path.append('../')
+from utils import measure_distance, get_center_of_bbox
 
 import cv2
 from ultralytics import YOLO
@@ -156,7 +159,7 @@ class PlayerTracker:
         if stub_path is not None:
             with open(stub_path, 'wb') as f:
                 pickle.dump(player_detections, f)
-
+        
         return player_detections
 
     def detect_frame(self, frame):
@@ -179,7 +182,7 @@ class PlayerTracker:
             object_cls_name = id_name_dict[object_cls_id]
             if object_cls_name == "person":
                 player_dict[track_id] = result
-
+        
         return player_dict
 
     def draw_bboxes(self, video_frames, player_detections):
